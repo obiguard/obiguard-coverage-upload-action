@@ -38,6 +38,34 @@ jobs:
         env:
           OBIGUARD_COVERAGE_TOKEN: test-token
 
+      - name: Create an lcov report bigger than Linux's single-argument limit
+        run: |
+          # Regression test for the payload being passed to curl as a literal
+          # `-d` argument: Linux caps a single execve() argument at ~128KB
+          # (MAX_ARG_STRLEN), separate from the larger overall ARG_MAX. A real
+          # project's lcov report — one entry per line/branch/function —
+          # blows past that easily, and the failure (curl exit 126) looks like
+          # an unreachable/misconfigured destination rather than an oversized
+          # argument, so this needs its own coverage.
+          {
+            for i in $(seq 1 20000); do
+              echo "SF:src/example_$i.js"
+              echo "DA:1,1"
+              echo "DA:2,0"
+              echo "end_of_record"
+            done
+          } > coverage/large-lcov.info
+          wc -c coverage/large-lcov.info
+
+      - name: Upload a large lcov report (should succeed, not exit 126)
+        uses: ./
+        with:
+          lcov-path: coverage/large-lcov.info
+          gateway-url: http://127.0.0.1:8123/v1/coverage
+          fail-on-error: 'true'
+        env:
+          OBIGUARD_COVERAGE_TOKEN: test-token
+
       - name: Upload with one unreachable destination (should warn, not fail)
         uses: ./
         with:

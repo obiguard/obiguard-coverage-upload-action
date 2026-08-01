@@ -21,12 +21,22 @@ if [ ! -f "$lcov_path" ]; then
   exit 1
 fi
 
-payload=$(jq -n \
+# Written to a file rather than held in a shell variable: lcov reports embed
+# one entry per line/branch/function in the project, so the JSON-wrapped
+# payload routinely exceeds Linux's ~128KB single-argument limit
+# (MAX_ARG_STRLEN). Passing it as a literal `-d "$payload"` argument then
+# fails execve() with E2BIG, which bash reports as exit 126 — indistinguishable
+# at a glance from a real curl/network failure. `--data @file` reads the body
+# from disk instead, so there's no argument-size ceiling.
+payload_file=$(mktemp)
+trap 'rm -f "$payload_file"' EXIT
+
+jq -n \
   --arg repo "$repo" \
   --arg branch "$branch" \
   --arg sha "$sha" \
   --rawfile lcov "$lcov_path" \
-  '{repoFullName:$repo, branch:$branch, commitSha:$sha, lcov:$lcov}')
+  '{repoFullName:$repo, branch:$branch, commitSha:$sha, lcov:$lcov}' > "$payload_file"
 
 # Uploads to one destination. Never lets curl's exit status (or a bad HTTP
 # status) escape as a script-ending error — the caller decides what to do
@@ -49,7 +59,7 @@ upload_one() {
     -X POST "$url" \
     -H "Authorization: Bearer $token" \
     -H "Content-Type: application/json" \
-    -d "$payload" 2>/dev/null)
+    --data "@$payload_file" 2>/dev/null)
   curl_exit=$?
 
   if [ "$curl_exit" -ne 0 ]; then
