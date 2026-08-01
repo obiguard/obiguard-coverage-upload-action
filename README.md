@@ -1,7 +1,7 @@
 # Obiguard Coverage Upload
 
 Upload an [lcov](https://github.com/linux-test-project/lcov) code coverage report to
-[Obiguard](https://obiguard.com)'s SOC &gt; Code Coverage feature, from a GitHub Actions workflow.
+[Obiguard](https://obiguard.ai)'s SOC &gt; Code Coverage feature, from a GitHub Actions workflow.
 
 This action is a thin wrapper around a `curl`/`jq` POST to your org's Obiguard gateway — see
 [`upload.sh`](./upload.sh) if you'd rather inline the logic yourself instead of depending on this
@@ -12,8 +12,10 @@ action.
 1. A Code Coverage token, created from your org's **SOC &gt; Log Ingestion** page in Obiguard (New
    token → Data type: "Code Coverage"). Store it as a repo or org secret, e.g.
    `OBIGUARD_COVERAGE_TOKEN`.
-2. Your org's gateway coverage endpoint URL — shown on the **SOC &gt; Code Coverage &gt; Set up CI
-   uploads** page. It looks like `https://<your-gateway-host>/v1/coverage`.
+2. If you're on the hosted Obiguard gateway, you can skip `gateway-url` entirely — it defaults to
+   `https://gateway.obiguard.ai/v1/coverage`. Self-hosted instances should override it with their
+   own endpoint, shown on the **SOC &gt; Code Coverage &gt; Set up CI uploads** page (it looks like
+   `https://<your-gateway-host>/v1/coverage`).
 3. A step earlier in the same job that produces an lcov report (Jest, pytest-cov, `gcov2lcov` for
    Go, etc. all work — anything that emits lcov).
 
@@ -42,6 +44,18 @@ jobs:
         uses: obiguard/obiguard-coverage-upload-action@v1
         with:
           lcov-path: coverage/lcov.info
+        env:
+          OBIGUARD_COVERAGE_TOKEN: ${{ secrets.OBIGUARD_COVERAGE_TOKEN }}
+```
+
+Self-hosting an Obiguard instance? Point `gateway-url` at it instead of the default
+`https://gateway.obiguard.ai/v1/coverage`:
+
+```yaml
+      - name: Upload coverage to Obiguard
+        uses: obiguard/obiguard-coverage-upload-action@v1
+        with:
+          lcov-path: coverage/lcov.info
           gateway-url: https://<your-gateway-host>/v1/coverage
         env:
           OBIGUARD_COVERAGE_TOKEN: ${{ secrets.OBIGUARD_COVERAGE_TOKEN }}
@@ -56,7 +70,7 @@ uploading a coverage run for a different ref than the one currently checked out)
 | Input             | Required | Default                | Description                                                                 |
 | ------------------ | -------- | ----------------------- | ----------------------------------------------------------------------------- |
 | `lcov-path`        | yes      | —                       | Path to the lcov report file                                                  |
-| `gateway-url`      | no*      | —                       | Obiguard gateway coverage endpoint. Ignored if `destinations` is set.         |
+| `gateway-url`      | no       | `https://gateway.obiguard.ai/v1/coverage` | Obiguard gateway coverage endpoint. Ignored if `destinations` is set.         |
 | `repo`             | no       | `github.repository`     | `repoFullName`, e.g. `your-org/your-repo`                                     |
 | `branch`           | no       | `github.ref_name`       | Branch name                                                                    |
 | `commit-sha`       | no       | `github.sha`            | Commit SHA                                                                     |
@@ -65,7 +79,7 @@ uploading a coverage run for a different ref than the one currently checked out)
 | `connect-timeout`  | no       | `5`                     | Max seconds to establish a connection per destination                         |
 | `max-time`         | no       | `15`                    | Max seconds for the whole request per destination                            |
 
-\* `gateway-url` + the `OBIGUARD_COVERAGE_TOKEN` env var are required unless `destinations` is set.
+The `OBIGUARD_COVERAGE_TOKEN` env var is required unless `destinations` is set.
 
 The token is read from the `OBIGUARD_COVERAGE_TOKEN` **environment variable**, not a `with:` input
 — set it via this step's `env:`, the same way you'd pass `SONAR_TOKEN` to
@@ -85,7 +99,7 @@ instead of `gateway-url`:
           lcov-path: coverage/lcov.info
           destinations: |
             https://staging.example.com/v1/coverage=${{ secrets.OBIGUARD_COVERAGE_TOKEN_STAGING }}
-            https://obiguard.com/v1/coverage=${{ secrets.OBIGUARD_COVERAGE_TOKEN_PROD }}
+            https://gateway.obiguard.ai/v1/coverage=${{ secrets.OBIGUARD_COVERAGE_TOKEN_PROD }}
 ```
 
 Each destination is attempted independently. By default, a failed destination logs a

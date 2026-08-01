@@ -34,6 +34,10 @@ payload=$(jq -n \
 upload_one() {
   local url="$1" token="$2" status curl_exit body_file
 
+  # Trim surrounding whitespace and a trailing slash so a copy-pasted URL
+  # (e.g. "https://host/v1/coverage/ ") still hits the right endpoint.
+  url="$(printf '%s' "$url" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s#/*$##')"
+
   if [ -z "$url" ] || [ -z "$token" ]; then
     echo "::warning::skipping destination with empty url or token"
     return 1

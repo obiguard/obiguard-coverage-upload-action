@@ -23,13 +23,15 @@ inputs:
     default: ''
   gateway-url:
     description: >-
-      Obiguard gateway coverage endpoint, e.g. https://<your-gateway-host>/v1/coverage.
-      Find the exact value on your org's SOC > Code Coverage > "Set up CI uploads" page.
-      Ignored if `destinations` is set. Requires the OBIGUARD_COVERAGE_TOKEN env var
-      (pass it via env:, not with:, so it's handled the same way other Obiguard/OTLP
+      Obiguard gateway coverage endpoint. Defaults to the hosted Obiguard gateway
+      (https://gateway.obiguard.ai/v1/coverage) — override this for a self-hosted
+      instance, e.g. https://<your-gateway-host>/v1/coverage. Find the exact value
+      for your org on the SOC > Code Coverage > "Set up CI uploads" page. Ignored
+      if `destinations` is set. Requires the OBIGUARD_COVERAGE_TOKEN env var (pass
+      it via env:, not with:, so it's handled the same way other Obiguard/OTLP
       tokens and secrets like SONAR_TOKEN are).
     required: false
-    default: ''
+    default: 'https://gateway.obiguard.ai/v1/coverage'
   destinations:
     description: >-
       Advanced: upload the same report to more than one gateway in one run (e.g. a
