@@ -1,0 +1,72 @@
+name: 'Obiguard Coverage Upload'
+description: 'Upload an lcov code coverage report to Obiguard (SOC > Code Coverage)'
+author: 'Obiguard'
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+
+inputs:
+  lcov-path:
+    description: 'Path to the lcov report file (e.g. coverage/lcov.info)'
+    required: true
+  repo:
+    description: 'repoFullName as "owner/repo". Defaults to the current repository (github.repository).'
+    required: false
+    default: ''
+  branch:
+    description: 'Branch name. Defaults to the current ref name (github.ref_name).'
+    required: false
+    default: ''
+  commit-sha:
+    description: 'Commit SHA. Defaults to the current commit (github.sha).'
+    required: false
+    default: ''
+  gateway-url:
+    description: >-
+      Obiguard gateway coverage endpoint, e.g. https://<your-gateway-host>/v1/coverage.
+      Find the exact value on your org's SOC > Code Coverage > "Set up CI uploads" page.
+      Ignored if `destinations` is set. Requires the OBIGUARD_COVERAGE_TOKEN env var
+      (pass it via env:, not with:, so it's handled the same way other Obiguard/OTLP
+      tokens and secrets like SONAR_TOKEN are).
+    required: false
+    default: ''
+  destinations:
+    description: >-
+      Advanced: upload the same report to more than one gateway in one run (e.g. a
+      staging and a production Obiguard instance). Multiline string, one
+      "<url>=<token>" pair per line. Overrides gateway-url/OBIGUARD_COVERAGE_TOKEN
+      when set. Each destination is attempted independently — see fail-on-error.
+    required: false
+    default: ''
+  fail-on-error:
+    description: >-
+      If "true", fail this step when any destination upload fails. Default "false":
+      log a warning per failed destination and continue, so one unreachable/misconfigured
+      destination doesn't fail the whole job.
+    required: false
+    default: 'false'
+  connect-timeout:
+    description: 'Max seconds to wait to establish a connection to a destination'
+    required: false
+    default: '5'
+  max-time:
+    description: 'Max seconds for the whole request to a destination, including upload time'
+    required: false
+    default: '15'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Upload lcov report to Obiguard
+      shell: bash
+      env:
+        REPO_INPUT: ${{ inputs.repo }}
+        BRANCH_INPUT: ${{ inputs.branch }}
+        SHA_INPUT: ${{ inputs.commit-sha }}
+        LCOV_PATH: ${{ inputs.lcov-path }}
+        GATEWAY_URL_INPUT: ${{ inputs.gateway-url }}
+        DESTINATIONS_INPUT: ${{ inputs.destinations }}
+        FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+        CONNECT_TIMEOUT: ${{ inputs.connect-timeout }}
+        MAX_TIME: ${{ inputs.max-time }}
+      run: "$GITHUB_ACTION_PATH/upload.sh"
