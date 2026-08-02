@@ -31,7 +31,12 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 is required here: the default shallow checkout doesn't
+      # bring in the release tag the sibling `release-please` job just pushed
+      # moments earlier, so `git tag -fa` below can't resolve it as a ref.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Move the floating major version tag
         env:
